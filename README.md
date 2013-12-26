@@ -64,7 +64,7 @@ Slide 组件可用于元素的轮播切换（包括Tab的轮播切换）。
 | data    | `Array` | - | 数组的每一项是一个包含属性"content"和idKey的key-value对象（"content"是该项的HTML字符串，idKey是该项的标识值） |
 | idKey    | `String` | "id" | 第一项的idKey值 |
 | quickSwitch    | `Boolean` | false | 快捷切换的控制开关 |
-| showTitle    | `Boolean` | "false" | 为每项添加title属性的开关，可选项true将为每一项添加title属性值为其内容本身 |
+| showTitle    | `Boolean` | false | 为每项添加title属性的开关，可选项true将为每一项添加title属性值为其内容本身 |
 
 **备注：**后期有升级一个显示当前项和总项数的设置，烦请 @坤哥 帮忙补全一下~
 
@@ -74,4 +74,4 @@ Slide 组件可用于元素的轮播切换（包括Tab的轮播切换）。
 | ------------- |:--------:| -----:|
 | switchNext     | - | 切换到下一项 |
 | switchPrev     | - | 切换到前一项 |
-| switchTo     | `Number`-targetIndex | 切换到第指定index的项数 |
+| switchTo     | `Number` | 切换到第指定index的项数 |
