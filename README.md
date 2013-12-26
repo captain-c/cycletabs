@@ -15,37 +15,38 @@ Slide 组件可用于元素的轮播切换（包括Tab的轮播切换）。
 
 使用实例（Fis2中），具体实现可以参见Demo或者主站的广告轮播、新闻、皮肤盒子等模块：
 
-    
-    -----------HTML-------------------------------------------------
-	<div class="slide-wrap"></div>
+```html
+<div class="slide-wrap"></div>
+```
 
-	--------JavaScript----------------------------------------------
-    var Slide = require("home:widget/ui/cycletabs/cycletabs.js");
-	var slide = new Slide.NavUI();
-	var options = {
-		containerId: ".slide-wrap",
-		itemSize: 100,
-		data: [{
-			"content": "<p>content 1</p>",
-			"id": 1
-		}, {
-			"content": "<p>content 2</p>",
-			"id": 2
-		}]
-	};
-	slide.init(options);
+```javascript
+var Slide = require("home:widget/ui/cycletabs/cycletabs.js");
+var slide = new Slide.NavUI();
+var options = {
+    containerId: ".slide-wrap",
+    itemSize: 100,
+    data: [{
+        "content": "<p>content 1</p>",
+        "id": 1
+    }, {
+        "content": "<p>content 2</p>",
+        "id": 2
+    }]
+};
+slide.init(options);
+```
 
-	---------CSS---------------------------------------------------
-	.ui-nav .wrap { overflow: hidden; }
-	.ui-nav .nav-item-list { position: relative; }
-	.ui-nav .prev, .ui-nav .next { cursor: pointer; }
+```css
+.ui-nav .wrap { overflow: hidden; }
+.ui-nav .nav-item-list { position: relative; }
+.ui-nav .prev, .ui-nav .next { cursor: pointer; }
 
-	.slide-wrap { position: relative; width: 100px; }
-	.slide-wrap .nav-item { float: left; width: 100px; }
-	.slide-wrap .prev, .slide-wrap .next { position: absolute; z-index: 1; }
-	.slide-wrap .prev { left: 0; }
-	.slide-wrap .next { right: 0; }
-
+.slide-wrap { position: relative; width: 100px; }
+.slide-wrap .nav-item { float: left; width: 100px; }
+.slide-wrap .prev, .slide-wrap .next { position: absolute; z-index: 1; }
+.slide-wrap .prev { left: 0; }
+.slide-wrap .next { right: 0; }
+```
 
 ### 参数说明 ###
 
