@@ -1,5 +1,6 @@
 var $ = require('common:widget/ui/jquery/jquery.js');
 var UT = require('common:widget/ui/ut/ut.js');
+var helper = require('common:widget/ui/helper/helper.js');
 var cycletabs = {};
 
 /**
@@ -12,6 +13,7 @@ cycletabs.UserLoopArray = function(){
     this.size = 0;
     this.numberList = [];
     this.count = 7;
+    this.current = 0;
 };
 cycletabs.UserLoopArray.prototype = {
     init: function(count, size, first){
@@ -41,6 +43,12 @@ cycletabs.UserLoopArray.prototype = {
      */
     getLast: function(){
         return this.last;
+    },
+    getCurrent: function(){
+        return this.current;
+    },
+    getCount: function(){
+        return this.count;
     },
     getList: function(){
         var counter = this.size;
@@ -108,17 +116,22 @@ cycletabs.UserLoopArray.prototype = {
         while(step){
             this.first--;
             this.last--;
+            this.current--;
             if(this.first < 0){
                 this.first = this.count-1;
             }
             if(this.last < 0){
                 this.last = this.count-1;
             }
+            if(this.current < 0){
+                this.current = this.count-1;
+            }
             step--;
         }
         return {
             first: this.first,
             last: this.last,
+            current: this.current,
             list: this.getList()
         }
     },
@@ -133,17 +146,22 @@ cycletabs.UserLoopArray.prototype = {
         while(step){
             this.first++;
             this.last++;
+            this.current++;
             if(this.first == this.count){
                 this.first = 0;
             }
             if(this.last == this.count){
                 this.last = 0;
             }
+            if(this.current == this.count){
+                this.current = 0;
+            }
             step--;
         }
         return {
             first: this.first,
             last: this.last,
+            current: this.current,
             list: this.getList()
         }
     },
@@ -151,6 +169,7 @@ cycletabs.UserLoopArray.prototype = {
         return [
             ' first:', this.first,
             ' last:', this.last,
+            ' current:', this.current,
             ' prev:', this.getPrev(),
             ' next:', this.getNext(),
             ' arr:', '[',this.getList().join('|'),']'
@@ -244,6 +263,7 @@ cycletabs.NavUI = function(){
     };
     this.DIR_KEY = null; //修正rtl/ltr的动作方向差异; 默认是 left/right => right/left
     this.quickSwitch = false; //是否显示快速跳转
+    this.completeLi = false; //完整li模板
 };
 cycletabs.NavUI.prototype = {
 
@@ -262,6 +282,7 @@ cycletabs.NavUI.prototype = {
      * @config {string} [autoScrollDirection='forward'] {'backward','forward'}
      * @config {number} [scrollDuration=300] 单次滚动动画用时
      * @config {string} [dir='ltr'] {'ltr','rtl'}
+     * @config {string} [hoverContainerId] hover容器，mouseenter时停止自动滚动，mouseleave时恢复自动滚动
      */
     init: function(config){
         var that = this;
@@ -275,17 +296,29 @@ cycletabs.NavUI.prototype = {
         that.$itemList = new Array(data.length);
         that.containerId = config.containerId;
         that.$container = $(that.containerId);  //cache jQueryObject
+        config.hoverContainerId && (that.$hoverContainer = $(config.hoverContainerId));//extra hover container
         that.idKey = config.idKey || 'id';
         that.ITEM_SIZE = config.itemSize;
         //fix
         if(config.offset != null){
             that.CURRENT_OFFSET = config.offset;
         }
+        var count = data.length;
+        if(count === 1) {
+            that.CURRENT_OFFSET = 0;
+            config.autoScroll = false;
+        }
         that._autoDuration = config.autoDuration || 5000;
         that._scrollDuration = config.scrollDuration || 300;
         that._autoScrollDirection = config.autoScrollDirection || 'forward';
         that.showTitle = config.showTitle || 0;
         that.quickSwitch = config.quickSwitch || false;
+        that.completeLi = config.completeLi || false;
+        that.itemTpl = {
+            "completeLi": '<li class="nav-item" data-id="#{idKey}" data-index="#{index}" title="#{content}"><i class="nav-item_#{idKey}"></i><span class="title">#{content}</span></li>',
+            "showTitle": '<li class="nav-item nav-item_#{idKey}" data-id="#{idKey}" data-index="#{index}" title="#{content}">#{content}</li>',
+            "normal": '<li class="nav-item nav-item_#{idKey}" data-id="#{idKey}" data-index="#{index}">#{content}</li>'
+        };
 
         //指定方向
         that.dir = config.dir || 'ltr';
@@ -297,7 +330,7 @@ cycletabs.NavUI.prototype = {
         }else{
             that.DIR_KEY = that.DIR_KEY_CONFIG[that.direction+'-'+that.dir];
         }
-       
+
 
         var defaultIndex = 0;
         var defaultId = config.defaultId;
@@ -314,12 +347,11 @@ cycletabs.NavUI.prototype = {
             this.Nav_SIZE = navSize;
         }
         //note: 在ITEM数量不足navSize时，不循环处理，避免交互处理困难
-        var count = data.length;
+
         var size = navSize;
         if (navSize < data.length) {
             that.needLoop = true;    //需处理循环的工作
         } else {  //数据不足
-            count = data.length;
             size = count;
         }
         that.indexObj.init(count, size, defaultIndex);
@@ -334,6 +366,14 @@ cycletabs.NavUI.prototype = {
         if(that._autoScroll){
             that._startAutoScroll();
         }
+    },
+    // 对外提供resize接口，在窗口宽度改变时同步调整
+    resize: function(size){
+        var that = this,
+            step = size * that.Nav_SIZE;
+        that.ITEM_SIZE = size;
+        that.$container.find('.wrap, .nav-item').css( that.DIR_KEY.SIZE , step );
+        that.$listContainer.css( that.DIR_KEY.SIZE, step );
     },
     _render: function(){
         var that = this;
@@ -364,12 +404,13 @@ cycletabs.NavUI.prototype = {
             var index = list[i];
             var idKey = data[index][that.idKey];
         //strArr.push(['<li class="nav-item" data-id="'+data[index][that.idKey]+'" data-index="'+index+'">'+data[index].content+'</li>'].join(''));
-            if(that.showTitle){
-                var $item = $('<li class="nav-item nav-item_'+idKey+'" data-id="'+idKey+'" data-index="'+index+'" title="'+data[index].content+'">'+data[index].content+'</li>');
-            }else{
-                var $item = $('<li class="nav-item nav-item_'+idKey+'" data-id="'+idKey+'" data-index="'+index+'">'+data[index].content+'</li>');
-            }
+            var $item = that._getItemObj({
+                idKey: idKey,
+                index: index,
+                content: data[index].content
+            });
             that.$itemList[index]=$item;
+            $item.css( that.DIR_KEY.SIZE , that.ITEM_SIZE+'px' );
             $tempList.push($item);
         }
         //strArr.push('</ul></div></div>');  // /.nav-nav-item-list /.wrap /.ui-ctrl
@@ -387,18 +428,35 @@ cycletabs.NavUI.prototype = {
         }
 
     },
+    _getItemObj: function(paramObj){
+        var that = this,
+            tplType = "normal";
+        if (that.completeLi) {
+            tplType = "completeLi";
+        }else if(that.showTitle){
+            tplType = "showTitle";
+        }
+        return $(helper.replaceTpl(that.itemTpl[tplType],paramObj));
+    },
     bindEvent: function(){
-        var that = this;
+        var that = this,
+            $that = $(that);
         var $container = $(that.containerId);
         ///////FOR LOGIC /////////////////
         //UI事件
         $($container).on('click', '.prev', function(e){
             that.switchPrev();
+            $that.trigger("e_click_prev");
         }).on('click','.next',function(e){
             that.switchNext();
+            $that.trigger("e_click_next");
         }).on('click','.nav-item',function(e){
             var index = $(this).attr('data-index');
             that.switchTo(index);
+            $that.trigger("e_click_nav",[index]);
+        }).on('mouseenter','.nav-item',function(e){
+            var index = $(this).attr('data-index');
+            $that.trigger("e_hover_nav",[index]);
         }).on('click', '.switch-item', function(){
             var idKey = $(this).attr('data-id');
             for(var i=0; i<that.dataList.length; i++){
@@ -407,6 +465,7 @@ cycletabs.NavUI.prototype = {
                 }
             }
             that.switchTo(i);
+        $that.trigger("e_click_switch",[i]);
         });
 
         //内部事件
@@ -416,20 +475,38 @@ cycletabs.NavUI.prototype = {
         });
 
         //////////FOR UI EFFECT////////////////
-        $($container).on({
-            'mouseenter': function(e){
-                $(this).addClass('ui-nav-hover');
-                if(that._autoScroll){
-                    that._stopAutoScroll();
+        if(that.$hoverContainer){
+            $(that.$hoverContainer).on({
+                'mouseenter': function(e){
+                    $(this).addClass('ui-nav-hover');
+                    if(that._autoScroll){
+                        that._stopAutoScroll();
+                    }
+                },
+                'mouseleave': function(e){
+                    $(this).removeClass('ui-nav-hover');
+                    if(that._autoScroll){
+                        that._startAutoScroll();
+                    }
                 }
-            },
-            'mouseleave': function(e){
-                $(this).removeClass('ui-nav-hover');
-                if(that._autoScroll){
-                    that._startAutoScroll();
+            });
+        }else{
+            $($container).on({
+                'mouseenter': function(e){
+                    $(this).addClass('ui-nav-hover');
+                    if(that._autoScroll){
+                        that._stopAutoScroll();
+                    }
+                },
+                'mouseleave': function(e){
+                    $(this).removeClass('ui-nav-hover');
+                    if(that._autoScroll){
+                        that._startAutoScroll();
+                    }
                 }
-            }
-        },'.ui-nav');
+            },'.ui-nav');
+        }
+
         //prev-arrow
         $($container).on({
             'mouseenter': function(e){
@@ -535,14 +612,15 @@ cycletabs.NavUI.prototype = {
             var $item = that.$itemList[index];
             if(!$item){
                 var newObj = that.dataList[index];
-                if(that.showTitle){
-                    $item = $('<li class="nav-item nav-item_'+newObj[that.idKey]+'" data-id="'+newObj[that.idKey]+'" data-index="'+index+'" title="'+newObj.content+'">'+newObj.content+'</li>');
-                }else{
-                    $item = $('<li class="nav-item nav-item_'+newObj[that.idKey]+'" data-id="'+newObj[that.idKey]+'" data-index="'+index+'">'+newObj.content+'</li>');
-                }
+                $item = that._getItemObj({
+                    idKey: newObj[that.idKey],
+                    index: index,
+                    content: newObj.content
+                });
                 that.$itemList[index] = $item;
-                $item.css( that.DIR_KEY.SIZE , that.ITEM_SIZE+'px' );
+                // $item.css( that.DIR_KEY.SIZE , that.ITEM_SIZE+'px' );
             }
+            $item.css( that.DIR_KEY.SIZE , that.ITEM_SIZE+'px' );
             $tempList.push($item);
             //strArr.push('<li class="nav-item" data-id="'+newObj[that.idKey]+'" data-index="'+index+'">'+newObj.content+'</li>');
         }
@@ -603,15 +681,16 @@ cycletabs.NavUI.prototype = {
             if(!$item){
                 var newObj = that.dataList[index];
                 //strArr.push('<li class="nav-item" data-id="'+newObj[that.idKey]+'" data-index="'+index+'">'+newObj.content+'</li>');
-                if(that.showTitle){
-                    $item = $('<li class="nav-item nav-item_'+newObj[that.idKey]+'" data-id="'+newObj[that.idKey]+'" data-index="'+index+'" title="'+newObj.content+'">'+newObj.content+'</li>');
-                }else{
-                    $item = $('<li class="nav-item nav-item_'+newObj[that.idKey]+'" data-id="'+newObj[that.idKey]+'" data-index="'+index+'">'+newObj.content+'</li>');
-                }
+                $item = that._getItemObj({
+                    idKey: newObj[that.idKey],
+                    index: index,
+                    content: newObj.content
+                });
                 //console.log(newObj);
                 that.$itemList[index] = $item;
-                $item.css( that.DIR_KEY.SIZE , that.ITEM_SIZE+'px' );
+                // $item.css( that.DIR_KEY.SIZE , that.ITEM_SIZE+'px' );
             }
+            $item.css( that.DIR_KEY.SIZE , that.ITEM_SIZE+'px' );
             $tempList.unshift($item);   //从后面开始放入
 
         }
@@ -654,6 +733,7 @@ cycletabs.NavUI.prototype = {
         var currentIndex = list[this.CURRENT_OFFSET];
         if(currentIndex == targetIndex){
             //console.warn('currentIndex == targetIndex');
+            $(that).trigger('e_toggle',{index: targetIndex});
             return ;
         }
         if(that._isScrolling){
@@ -703,7 +783,6 @@ cycletabs.NavUI.prototype = {
             that.$container.find(".switch .switch-item-current").removeClass("switch-item-current");
             that.$container.find(".switch .switch-item_"+(1+currentIndex)).addClass("switch-item-current");
         }
-
         $(this).trigger('e_change',{isInit: isInit, index: currentIndex, itemObj:this.dataList[currentIndex]});
     },
     /**
@@ -726,22 +805,6 @@ cycletabs.NavUI.prototype = {
         var that = this;
         clearInterval(that._timerAutoScroll);
     }
-    //,
-    /**
-     * 暂停自动滚动？
-     */
-    /*pauseAutoScroll: function(){
-        if(this._autoScroll){
-            this._autoScroll = false;
-            this._stopAutoScroll();
-        }
-    },*/
-    /**
-     * 恢复自动滚动
-     */
-    /*resumeAutoScroll: function(){
-        this._autoScroll = true;
-    }*/
 };
-    
+
 module.exports = cycletabs;
