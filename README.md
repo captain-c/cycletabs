@@ -66,6 +66,7 @@ slide.init(options);
 | idKey    | `String` | "id" | 第一项的idKey值 |
 | quickSwitch    | `Boolean` | false | 快捷切换的控制开关 |
 | showTitle    | `Boolean` | false | 为每项添加title属性的开关，可选项true将为每一项添加title属性值为其内容本身 |
+| hoverContainerId	| `String` | - | hover容器（有了它就不再仅限于containerId指定的容器了），mouseenter时停止自动滚动，mouseleave时恢复自动滚动 |
 
 **备注：**后期有升级一个显示当前项和总项数的设置，烦请 @坤哥 帮忙补全一下~
 
@@ -76,3 +77,15 @@ slide.init(options);
 | switchNext     | - | 切换到下一项 |
 | switchPrev     | - | 切换到前一项 |
 | switchTo     | `Number` | 切换到第指定index的项数 |
+| resize     | `Number` | 对外提供resize接口，在窗口宽度改变时根据参数同步调整
+
+### 外部事件 ###
+| 事件名        | 参数 | 描述 |
+| ------------- |:--------:| -----:|
+| e_click_prev     | - | 切换到前一项时抛出 |
+| e_click_next    | - | 切换到下一项时抛出 |
+| e_click_nav    | `Number` | 点击某一项时抛出，传递该项index序号 |
+| e_hover_nav    | `Number` | hover到某一项时抛出，传递该项index序号 |
+| e_click_switch    | `Number` | 点击快捷切换quickSwitch时抛出，传递被点击项index序号 |
+| e_toggle    | `Object` | 点击当前项时抛出，传递{index: 当前项index序号} |
+| e_change    | `Object` | 切换当前项时抛出，传递{isInit: 是否是初始化标识, index: 当前项index序号, itemObj:当前项对应的数据对象 |
